@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Queue Sim — Service Desk Training</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B0F14; --panel:#121821; --panel-raised:#182130; --line:#232D3B;
+    --text:#E7ECF2; --muted:#8592A3;
+    --amber:#F2A93B; --red:#E5484D; --teal:#2BD4A0; --blue:#4C8DFF;
+    --radius-sm:8px; --radius-md:14px; --radius-lg:22px;
+    --ease:cubic-bezier(.22,.9,.32,1);
+  }
+  html[data-theme="light"]{
+    --ink:#F1F4F6; --panel:#FFFFFF; --panel-raised:#FAFBFC; --line:#DCE2E8;
+    --text:#16202B; --muted:#5B6672;
+    --amber:#B9760E; --red:#C22A34; --teal:#0F9C74; --blue:#2E67D8;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--ink); color:var(--text); font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased; transition:background-color .45s var(--ease), color .45s var(--ease);
+    overflow-x:hidden;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .disp{font-family:'Space Grotesk',sans-serif;}
+  button{font-family:inherit;}
+  a{color:var(--blue);}
+  ::selection{background:var(--blue);color:#fff;}
+
+  .backdrop{position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;}
+  .backdrop span{position:absolute; border-radius:50%; filter:blur(90px); opacity:.14;}
+  .backdrop span:nth-child(1){width:520px;height:520px; background:var(--blue); top:-160px; left:-120px;}
+  .backdrop span:nth-child(2){width:420px;height:420px; background:var(--teal); bottom:-140px; right:-100px;}
+
+  #app{position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column;}
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 28px; border-bottom:1px solid var(--line);
+    transition:border-color .45s var(--ease);
+  }
+  .brand{display:flex; align-items:center; gap:10px; cursor:pointer;}
+  .brand-mark{
+    width:30px;height:30px;border-radius:8px; background:linear-gradient(135deg,var(--blue),var(--teal));
+    display:flex;align-items:center;justify-content:center; font-size:14px; font-weight:700; color:#04101c;
+  }
+  .brand-name{font-family:'Space Grotesk'; font-weight:600; font-size:16px; letter-spacing:.2px;}
+  .brand-sub{color:var(--muted); font-size:12.5px; margin-left:4px;}
+  .topbar-right{display:flex; align-items:center; gap:12px;}
+  .welcome-text{font-size:13.5px; color:var(--muted);}
+  .welcome-text b{color:var(--text); font-weight:600;}
+  .icon-btn{
+    width:40px;height:40px;border-radius:50%;border:1px solid var(--line); background:var(--panel); color:var(--text);
+    cursor:pointer; display:flex;align-items:center;justify-content:center;
+    transition:background-color .45s var(--ease), border-color .45s var(--ease), transform .2s ease;
+  }
+  .icon-btn:hover{transform:translateY(-1px);}
+  .icon-btn svg{width:17px;height:17px;}
+  .text-btn{
+    border:1px solid var(--line); background:var(--panel); color:var(--text); border-radius:999px;
+    padding:9px 16px; font-size:13px; cursor:pointer; transition:border-color .2s ease;
+  }
+  .text-btn:hover{border-color:var(--blue);}
+
+  main{flex:1; display:flex; padding:32px 20px;}
+  main.centered{align-items:center; justify-content:center;}
+  main.top{align-items:flex-start; justify-content:center;}
+  section[hidden]{display:none !important;}
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-lg);
+    transition:background-color .45s var(--ease), border-color .45s var(--ease);
+  }
+  .rise{opacity:0; transform:translateY(14px); animation:rise .55s var(--ease) forwards;}
+  @keyframes rise{to{opacity:1; transform:translateY(0);}}
+
+  .field-label{font-size:13px; color:var(--muted); margin:0 0 10px; font-weight:500;}
+  select.select-field{
+    width:100%; background:var(--panel-raised); border:1px solid var(--line); color:var(--text);
+    border-radius:var(--radius-sm); padding:12px 14px; font-size:14px; font-family:inherit;
+    transition:border-color .2s ease; margin-bottom:26px; cursor:pointer; appearance:auto;
+  }
+  select.select-field:focus{outline:none; border-color:var(--blue);}
+
+  textarea, input[type="text"], input[type="password"], input[type="email"]{
+    width:100%; background:var(--panel-raised); border:1px solid var(--line); color:var(--text);
+    border-radius:var(--radius-sm); padding:12px 14px; font-size:14px; font-family:inherit;
+    transition:border-color .2s ease;
+  }
+  textarea:focus, input:focus{outline:none; border-color:var(--blue);}
+  textarea{resize:vertical; min-height:70px;}
+  .field{margin-bottom:18px;}
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+
+  .primary-btn{
+    width:100%; padding:14px 18px; border-radius:var(--radius-sm); border:none;
+    background:var(--blue); color:#fff; font-size:15px; font-weight:600; cursor:pointer;
+    font-family:'Space Grotesk'; letter-spacing:.2px; transition:filter .2s ease, transform .15s ease;
+  }
+  .primary-btn:hover{filter:brightness(1.08);}
+  .primary-btn:active{transform:scale(.99);}
+  .primary-btn:disabled{opacity:.5; cursor:not-allowed;}
+  .ghost-btn{
+    width:100%; padding:13px; border-radius:var(--radius-sm); border:1px solid var(--line);
+    background:var(--panel-raised); color:var(--text); font-weight:600; cursor:pointer;
+    font-family:'Space Grotesk'; transition:border-color .2s ease;
+  }
+  .ghost-btn:hover{border-color:var(--blue);}
+
+  .banner{padding:10px 14px; border-radius:var(--radius-sm); font-size:13px; margin-bottom:18px; display:none;}
+  .banner.show{display:block;}
+  .banner.error{background:rgba(229,72,77,.12); border:1px solid var(--red); color:var(--red);}
+  .banner.success{background:rgba(43,212,160,.12); border:1px solid var(--teal); color:var(--teal);}
+
+  /* ---------- AUTH ---------- */
+  #auth-screen{width:100%; max-width:440px;}
+  .auth-card{padding:36px;}
+  .auth-tabs{display:flex; border:1px solid var(--line); border-radius:999px; padding:4px; margin-bottom:26px;}
+  .auth-tab{flex:1; text-align:center; padding:9px; border-radius:999px; font-size:13.5px; font-weight:600; cursor:pointer; color:var(--muted);}
+  .auth-tab.active{background:var(--blue); color:#fff;}
+  .auth-card h1{font-family:'Space Grotesk'; font-size:24px; margin:0 0 6px; font-weight:600;}
+  .auth-card > p.lede{color:var(--muted); margin:0 0 24px; font-size:14px; line-height:1.5;}
+  .switch-line{text-align:center; font-size:13px; color:var(--muted); margin-top:16px;}
+  .switch-line span{color:var(--blue); cursor:pointer; font-weight:600;}
+
+  /* ---------- DASHBOARD ---------- */
+  #dashboard-screen{width:100%; max-width:1080px;}
+  .dash-head{display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px; flex-wrap:wrap; gap:14px;}
+  .dash-head h1{font-family:'Space Grotesk'; font-size:26px; margin:0 0 4px;}
+  .dash-head p{color:var(--muted); margin:0; font-size:14px;}
+  .stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:26px;}
+  .stat-card{padding:20px;}
+  .stat-label{font-size:12px; color:var(--muted); margin-bottom:8px;}
+  .stat-value{font-family:'Space Grotesk'; font-size:28px; font-weight:700;}
+  .stat-sub{font-size:12px; color:var(--muted); margin-top:4px;}
+
+  .panel-block{padding:24px; margin-bottom:22px;}
+  .panel-block h2{font-family:'Space Grotesk'; font-size:16px; margin:0 0 18px;}
+
+  .bar-chart{display:flex; align-items:flex-end; gap:10px; height:140px; padding:0 4px;}
+  .bar-chart .bar-wrap{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
+  .bar-chart .bar{width:100%; max-width:34px; border-radius:6px 6px 2px 2px; background:var(--blue); transition:height .8s var(--ease);}
+  .bar-chart .bar-num{font-size:11px; color:var(--muted); margin-bottom:6px; font-family:'JetBrains Mono';}
+  .bar-chart .bar-lbl{font-size:10.5px; color:var(--muted); margin-top:8px;}
+
+  table.data-table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  table.data-table th{text-align:left; color:var(--muted); font-weight:500; font-size:12px; padding:10px 12px; border-bottom:1px solid var(--line);}
+  table.data-table td{padding:12px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  table.data-table tr:last-child td{border-bottom:none;}
+  .row-btn{border:1px solid var(--line); background:var(--panel-raised); color:var(--text); border-radius:6px; padding:6px 11px; font-size:12px; cursor:pointer; margin-right:6px;}
+  .row-btn:hover{border-color:var(--blue);}
+  .pill{display:inline-block; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:600;}
+  .pill.resolved{background:rgba(43,212,160,.15); color:var(--teal);}
+  .pill.escalated{background:rgba(229,72,77,.15); color:var(--red);}
+  .pill.ended_by_agent{background:rgba(242,169,59,.15); color:var(--amber);}
+  .empty-note{color:var(--muted); font-size:13.5px; padding:20px 0; text-align:center;}
+
+  /* ---------- SETUP ---------- */
+  #setup-screen{width:100%; max-width:800px;}
+  .setup-card{padding:36px;}
+  .setup-card h1{font-family:'Space Grotesk'; font-size:26px; margin:0 0 6px; font-weight:600;}
+  .setup-card > p.lede{color:var(--muted); margin:0 0 26px; font-size:14.5px; line-height:1.5;}
+
+  /* ---------- CHAT ---------- */
+  #chat-screen{width:100%; max-width:1080px; display:grid; grid-template-columns:260px 1fr; gap:20px; align-items:start;}
+  .ticket-panel{padding:22px; position:sticky; top:20px;}
+  .ticket-id{font-size:12px; color:var(--muted); margin-bottom:4px;}
+  .ticket-title{font-family:'Space Grotesk'; font-size:16px; font-weight:600; margin:0 0 2px;}
+  .ticket-mood{font-size:12.5px; color:var(--muted); margin-bottom:20px;}
+  .gauge-wrap{margin-bottom:20px;}
+  .gauge-label{font-size:11.5px; color:var(--muted); margin-bottom:8px; display:flex; justify-content:space-between;}
+  .gauge-state{font-weight:600;}
+  svg.gauge{width:100%; height:auto; display:block;}
+  #gauge-needle{transition:transform .7s var(--ease);}
+  #gauge-arc-fg{transition:stroke .5s ease;}
+  .timer-row{display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--muted); margin-bottom:18px;}
+  .timer-value{color:var(--text);}
+  .end-btn{width:100%; padding:11px; border-radius:var(--radius-sm); border:1px solid var(--line); background:transparent; color:var(--muted); font-size:13px; cursor:pointer; transition:border-color .2s ease, color .2s ease;}
+  .end-btn:hover{border-color:var(--red); color:var(--red);}
+
+  .chat-panel{display:flex; flex-direction:column; height:78vh; min-height:520px; overflow:hidden;}
+  .thread{flex:1; overflow-y:auto; padding:22px; display:flex; flex-direction:column; gap:14px;}
+  .thread::-webkit-scrollbar{width:8px;}
+  .thread::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px;}
+  .bubble{max-width:72%; padding:11px 15px; border-radius:14px; font-size:14.5px; line-height:1.5; opacity:0; transform:translateY(8px); animation:pop .35s var(--ease) forwards;}
+  @keyframes pop{to{opacity:1; transform:translateY(0);}}
+  .bubble.client{align-self:flex-start; background:var(--panel-raised); border:1px solid var(--line); border-left:3px solid var(--mood-color, var(--amber)); border-top-left-radius:4px;}
+  .bubble.agent{align-self:flex-end; background:var(--blue); color:#fff; border-top-right-radius:4px;}
+  .bubble.system{align-self:center; color:var(--muted); font-size:12.5px; background:none; border:none; text-align:center;}
+  .typing{align-self:flex-start; display:flex; gap:4px; padding:12px 15px;}
+  .typing span{width:6px;height:6px;border-radius:50%; background:var(--muted); animation:blink 1.2s infinite ease-in-out;}
+  .typing span:nth-child(2){animation-delay:.15s;} .typing span:nth-child(3){animation-delay:.3s;}
+  @keyframes blink{0%,80%,100%{opacity:.25;} 40%{opacity:1;}}
+  .composer{display:flex; gap:10px; padding:16px; border-top:1px solid var(--line);}
+  .composer textarea{min-height:0; height:46px; padding:12px 14px; resize:none;}
+  .send-btn{padding:0 20px; border-radius:var(--radius-sm); border:none; background:var(--blue); color:#fff; font-weight:600; cursor:pointer; font-family:'Space Grotesk'; transition:filter .2s ease;}
+  .send-btn:hover{filter:brightness(1.08);}
+  .send-btn:disabled{opacity:.4; cursor:not-allowed;}
+
+  /* ---------- REPORT ---------- */
+  #report-screen{width:100%; max-width:740px;}
+  .report-card{padding:36px;}
+  .report-top{display:flex; align-items:center; gap:24px; margin-bottom:30px; flex-wrap:wrap;}
+  .score-ring{position:relative; width:104px; height:104px; flex-shrink:0;}
+  .score-ring svg{width:100%; height:100%; transform:rotate(-90deg);}
+  .score-num{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-size:26px; font-weight:700;}
+  .report-verdict-label{font-size:12px; color:var(--muted); margin-bottom:4px;}
+  .report-verdict{font-family:'Space Grotesk'; font-size:17px; font-weight:600; line-height:1.4;}
+  .report-meta{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .cat-row{margin-bottom:14px;}
+  .cat-row-top{display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;}
+  .cat-row-top .val{color:var(--muted);}
+  .bar-track{height:7px; border-radius:4px; background:var(--panel-raised); overflow:hidden;}
+  .bar-fill{height:100%; border-radius:4px; width:0%; transition:width 1s var(--ease); background:var(--blue);}
+  .lists{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin:28px 0 22px;}
+  .lists h3{font-family:'Space Grotesk'; font-size:13px; margin:0 0 10px; color:var(--muted); font-weight:600;}
+  .lists ul{margin:0; padding-left:18px; font-size:13.5px; line-height:1.6;}
+  .lists li{margin-bottom:6px;}
+  .transcript-toggle{font-size:13px; color:var(--blue); cursor:pointer; margin-bottom:14px; display:inline-block;}
+  .transcript-box{max-height:260px; overflow-y:auto; border:1px solid var(--line); border-radius:var(--radius-sm); padding:14px; margin-bottom:22px; font-size:13px; line-height:1.6;}
+  .transcript-box p{margin:0 0 8px;}
+  .transcript-box b{color:var(--blue);}
+  .report-actions{display:flex; gap:12px;}
+
+  /* ---------- ADMIN ---------- */
+  #admin-users-screen, #admin-user-screen{width:100%; max-width:1080px;}
+  .admin-head{display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:22px; flex-wrap:wrap; gap:12px;}
+  .admin-head h1{font-family:'Space Grotesk'; font-size:26px; margin:0 0 4px;}
+  .admin-head p{color:var(--muted); margin:0; font-size:14px;}
+  .back-link{font-size:13px; color:var(--blue); cursor:pointer; margin-bottom:16px; display:inline-block;}
+  .reset-pw-box{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;}
+  .reset-pw-box .field{flex:1; min-width:180px; margin-bottom:0;}
+  .reset-pw-box button{white-space:nowrap;}
+
+  @media (max-width:820px){
+    #chat-screen{grid-template-columns:1fr;}
+    .ticket-panel{position:static;}
+    .chat-panel{height:62vh;}
+    .lists{grid-template-columns:1fr;}
+    .stat-grid{grid-template-columns:1fr 1fr;}
+    .field-row{grid-template-columns:1fr;}
+    table.data-table{display:block; overflow-x:auto;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+  }
+</style>
+</head>
+<body>
+<div class="backdrop"><span></span><span></span></div>
+<div id="app">
+
+  <header class="topbar">
+    <div class="brand" id="brand-home">
+      <div class="brand-mark disp">Q</div>
+      <div>
+        <span class="brand-name">Queue Sim</span>
+        <span class="brand-sub">service desk trainer</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="welcome-text" id="welcome-text" hidden></span>
+      <button class="text-btn" id="logout-btn" hidden>Sign out</button>
+      <button class="icon-btn" id="theme-toggle" aria-label="Toggle light and dark mode">
+        <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main-el" class="centered">
+
+    <!-- AUTH -->
+    <section id="auth-screen">
+      <div class="card auth-card rise">
+        <div class="auth-tabs">
+          <div class="auth-tab active" id="tab-login">Sign in</div>
+          <div class="auth-tab" id="tab-signup">Sign up</div>
+        </div>
+
+        <div id="login-pane">
+          <h1>Welcome back</h1>
+          <p class="lede">Sign in to run a ticket or check your past reports.</p>
+          <div class="banner error" id="login-error"></div>
+          <div class="field"><input type="email" id="login-email" placeholder="Work email"></div>
+          <div class="field"><input type="password" id="login-password" placeholder="Password"></div>
+          <button class="primary-btn" id="login-btn">Sign in</button>
+          <p class="switch-line">New here? <span id="go-signup">Create an account</span></p>
+        </div>
+
+        <div id="signup-pane" hidden>
+          <h1>Create your account</h1>
+          <p class="lede">You'll use this to sign in and to keep a history of your sessions.</p>
+          <div class="banner error" id="signup-error"></div>
+          <div class="field"><input type="text" id="signup-name" placeholder="Full name"></div>
+          <div class="field"><input type="email" id="signup-email" placeholder="Work email"></div>
+          <div class="field"><input type="text" id="signup-sap" placeholder="SAP ID"></div>
+          <div class="field-row">
+            <div class="field"><input type="password" id="signup-password" placeholder="Password"></div>
+            <div class="field"><input type="password" id="signup-confirm" placeholder="Confirm password"></div>
+          </div>
+          <button class="primary-btn" id="signup-btn">Create account</button>
+          <p class="switch-line">Already have an account? <span id="go-login">Sign in</span></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard-screen" hidden>
+      <div class="dash-head">
+        <div>
+          <h1 id="dash-welcome">Welcome</h1>
+          <p>Here's how your training sessions have gone so far.</p>
+        </div>
+        <button class="primary-btn" id="new-ticket-btn" style="width:auto;">Start new ticket</button>
+      </div>
+
+      <div class="stat-grid">
+        <div class="card stat-card"><div class="stat-label">Tickets run</div><div class="stat-value" id="stat-count">0</div></div>
+        <div class="card stat-card"><div class="stat-label">Average score</div><div class="stat-value" id="stat-avg">—</div></div>
+        <div class="card stat-card"><div class="stat-label">Strongest area</div><div class="stat-value" id="stat-best">—</div><div class="stat-sub" id="stat-best-sub"></div></div>
+        <div class="card stat-card"><div class="stat-label">Last outcome</div><div class="stat-value" id="stat-last">—</div><div class="stat-sub" id="stat-last-sub"></div></div>
+      </div>
+
+      <div class="card panel-block">
+        <h2>Recent scores</h2>
+        <div class="bar-chart" id="score-chart"></div>
+      </div>
+
+      <div class="card panel-block">
+        <h2>Session history</h2>
+        <div id="history-table-wrap"></div>
+      </div>
+    </section>
+
+    <!-- SETUP -->
+    <section id="setup-screen" hidden>
+      <div class="card setup-card rise">
+        <h1>Take the next ticket.</h1>
+        <p class="lede">Pick who's calling and what's broken. The client will open the chat — handle it like it's live.</p>
+        <div class="banner error" id="setup-error"></div>
+        <p class="field-label">Client's mood</p>
+        <select class="select-field" id="mood-select">
+          <option value="" disabled selected>Choose a mood…</option>
+        </select>
+        <p class="field-label">What's wrong</p>
+        <select class="select-field" id="scenario-select">
+          <option value="" disabled selected>Choose a scenario…</option>
+        </select>
+        <button class="primary-btn" id="start-btn">Open the ticket</button>
+      </div>
+    </section>
+
+    <!-- CHAT -->
+    <section id="chat-screen" hidden>
+      <div class="card ticket-panel">
+        <div class="ticket-id mono" id="ticket-id">SD-00000</div>
+        <div class="ticket-title" id="ticket-scenario-title">—</div>
+        <div class="ticket-mood" id="ticket-mood-title">—</div>
+        <div class="gauge-wrap">
+          <div class="gauge-label"><span>Client temperature</span><span class="gauge-state" id="gauge-state">Critical</span></div>
+          <svg class="gauge" viewBox="0 0 200 110">
+            <path d="M10,100 A90,90 0 0,1 190,100" fill="none" stroke="var(--line)" stroke-width="14" stroke-linecap="round"/>
+            <path id="gauge-arc-fg" d="M10,100 A90,90 0 0,1 190,100" fill="none" stroke="var(--red)" stroke-width="14" stroke-linecap="round" stroke-dasharray="283" stroke-dashoffset="255"/>
+            <line id="gauge-needle" x1="100" y1="100" x2="100" y2="26" stroke="var(--text)" stroke-width="3" stroke-linecap="round" transform="rotate(-72 100 100)"/>
+            <circle cx="100" cy="100" r="5" fill="var(--text)"/>
+          </svg>
+        </div>
+        <div class="timer-row"><span>Elapsed</span><span class="timer-value mono" id="timer">00:00</span></div>
+        <button class="end-btn" id="end-btn">End test now</button>
+      </div>
+      <div class="card chat-panel">
+        <div class="thread" id="thread"></div>
+        <div class="composer">
+          <textarea id="agent-input" placeholder="Type your response to the client…"></textarea>
+          <button class="send-btn" id="send-btn">Send</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORT -->
+    <section id="report-screen" hidden>
+      <div class="card report-card rise">
+        <div class="report-top">
+          <div class="score-ring">
+            <svg viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="44" fill="none" stroke="var(--line)" stroke-width="8"/>
+              <circle id="score-circle" cx="50" cy="50" r="44" fill="none" stroke="var(--blue)" stroke-width="8" stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="276.5"/>
+            </svg>
+            <div class="score-num" id="score-num">0</div>
+          </div>
+          <div>
+            <div class="report-verdict-label">Session report</div>
+            <div class="report-verdict" id="report-verdict">—</div>
+            <div class="report-meta" id="report-meta"></div>
+          </div>
+        </div>
+        <div id="cat-rows"></div>
+        <div class="lists">
+          <div><h3>What worked</h3><ul id="strengths-list"></ul></div>
+          <div><h3>What to fix</h3><ul id="improvements-list"></ul></div>
+        </div>
+        <span class="transcript-toggle" id="transcript-toggle">View transcript ▾</span>
+        <div class="transcript-box" id="transcript-box" hidden></div>
+        <div class="report-actions">
+          <button class="ghost-btn" id="report-back-btn">Back</button>
+          <button class="primary-btn" id="report-download-btn">Download report</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ADMIN: USERS LIST -->
+    <section id="admin-users-screen" hidden>
+      <div class="admin-head">
+        <div><h1>Admin portal</h1><p>All registered trainees and their session activity.</p></div>
+      </div>
+      <div class="card panel-block">
+        <div id="admin-users-table-wrap"></div>
+      </div>
+    </section>
+
+    <!-- ADMIN: SINGLE USER -->
+    <section id="admin-user-screen" hidden>
+      <span class="back-link" id="admin-back-link">← Back to all users</span>
+      <div class="admin-head">
+        <div><h1 id="admin-user-name">—</h1><p id="admin-user-meta">—</p></div>
+      </div>
+      <div class="card panel-block">
+        <h2>Reset password</h2>
+        <div class="banner success" id="reset-pw-success"></div>
+        <div class="banner error" id="reset-pw-error"></div>
+        <div class="reset-pw-box">
+          <div class="field"><input type="password" id="reset-pw-input" placeholder="New password (min. 8 characters)"></div>
+          <button class="ghost-btn" id="reset-pw-btn" style="width:auto;">Set new password</button>
+        </div>
+      </div>
+      <div class="card panel-block">
+        <h2>Session history</h2>
+        <div id="admin-user-history-wrap"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- data ---------------- */
+  const MOODS = [
+    {id:'furious', label:'Furious', desc:'wants a fix now', color:'var(--red)', start:12,
+      persona:"You are extremely angry and impatient. You feel ignored and let down. You speak in short, sharp sentences, may raise your voice (in text: short, blunt lines, occasional caps for emphasis), and threaten to escalate if you don't get quick, competent help. You calm down only if the agent acknowledges your anger genuinely and makes clear, confident progress fast."},
+    {id:'onedge', label:'On edge', desc:'stressed, low patience', color:'var(--red)', start:22,
+      persona:"You are stressed and irritable because this issue is costing you time or money. You're not screaming but you're curt, interrupt with 'can we just fix it', and get more annoyed by vague answers or being asked to repeat yourself. Clear, decisive help calms you down."},
+    {id:'worried', label:'Worried', desc:'anxious, needs reassurance', color:'var(--amber)', start:34,
+      persona:"You are anxious about the impact of this issue (data loss, missing a deadline, looking bad to your boss). You ask a lot of 'is it going to be okay' type questions. You need reassurance as much as a technical fix. You calm down when the agent is confident, explains clearly, and checks in on how you're doing."},
+    {id:'lost', label:'Lost', desc:'confused, low technical knowledge', color:'var(--amber)', start:40,
+      persona:"You are not technical and easily confused by jargon. You ask the agent to explain things in plain terms, sometimes misunderstand instructions, and need step-by-step guidance. You get frustrated if the agent uses acronyms or talks down to you, but relax with patient, simple explanations."},
+    {id:'rushed', label:'In a rush', desc:'impatient, has somewhere to be', color:'var(--amber)', start:30,
+      persona:"You are in a hurry — you have a meeting or deadline in minutes. You keep mentioning time pressure, want the fastest path forward even if it's a workaround, and get annoyed by long explanations. You respond well to agents who triage fast and give you a clear time estimate."},
+    {id:'skeptical', label:'Doubtful', desc:'distrustful after past bad support', color:'var(--blue)', start:38,
+      persona:"You've had bad experiences with support before and expect to be fobbed off. You're guarded, ask 'are you sure' and push back on vague reassurances, and want proof the agent actually understands the issue. You warm up once the agent demonstrates real competence and follows through."}
+  ];
+
+  const SCENARIOS = [
+    {id:'outage', label:'Production outage', detail:'Your team\'s production service is down for customers right now, and every minute it stays down matters.'},
+    {id:'vpn', label:'VPN won\'t connect', detail:'You can\'t connect to the company VPN from home, so you can\'t reach any internal systems you need for work today.'},
+    {id:'locked', label:'Locked out of account', detail:'You are locked out of your work account after too many failed logins and cannot get into your email or tools.'},
+    {id:'deploy', label:'Deployment failed', detail:'A deployment you or your team pushed has failed partway through and you are not sure if it\'s safe to retry or if something is broken in production.'},
+    {id:'slow', label:'Site running slow', detail:'An internal tool or website your team depends on has become extremely slow over the last hour, making it hard to get work done.'},
+    {id:'data', label:'Data looks wrong', detail:'A dashboard or report you rely on is showing numbers that look clearly wrong or out of date, and you need to know if you can trust it.'},
+    {id:'access', label:'Access / password request', detail:'You are asking for a password reset or for access to a tool or system to be granted so you can get back to work right now.'},
+    {id:'software', label:'Software / license request', detail:'You need a piece of software installed or licensed on your machine to finish a task you are on right now.'},
+    {id:'hardware', label:'Hardware request', detail:'You need a laptop, monitor, or other piece of equipment issued, replaced, or repaired.'},
+    {id:'email', label:'Email / mailbox issue', detail:'Your work email is missing messages, bouncing replies, or completely inaccessible.'},
+    {id:'printer', label:'Printer / peripheral issue', detail:'A shared printer, scanner, or other peripheral your team relies on has stopped working.'},
+    {id:'maintenance', label:'Maintenance / infra request', detail:'You are asking about a planned maintenance window, or requesting a change to a server or piece of infrastructure your team owns.'}
+  ];
+
+  const TURN_SCHEMA = {
+    type:'OBJECT',
+    properties:{ reply:{type:'STRING'}, satisfaction:{type:'NUMBER'}, status:{type:'STRING', enum:['ongoing','resolved','escalated']} },
+    required:['reply','satisfaction','status']
+  };
+  const SCORE_SCHEMA = {
+    type:'OBJECT',
+    properties:{
+      overall_score:{type:'NUMBER'}, empathy:{type:'NUMBER'}, technical_accuracy:{type:'NUMBER'},
+      resolution:{type:'NUMBER'}, communication:{type:'NUMBER'}, verdict:{type:'STRING'},
+      strengths:{type:'ARRAY', items:{type:'STRING'}}, improvements:{type:'ARRAY', items:{type:'STRING'}}
+    },
+    required:['overall_score','empathy','technical_accuracy','resolution','communication','verdict','strengths','improvements']
+  };
+
+  /* ---------------- state ---------------- */
+  const state = {
+    user:null, mood:null, scenario:null, history:[], satisfaction:30,
+    startTime:null, timerHandle:null, ended:false, busy:false,
+    ticketId:null, lastReport:null, reportBackTarget:'dashboard', adminCurrentUserId:null
+  };
+
+  const $ = sel => document.querySelector(sel);
+  const el = (tag, cls) => { const e=document.createElement(tag); if(cls) e.className=cls; return e; };
+
+  function showBanner(sel, msg, type){
+    const b = $(sel);
+    b.textContent = msg;
+    b.className = 'banner ' + (type||'error') + ' show';
+  }
+  function clearBanner(sel){ $(sel).className = $(sel).className.replace(' show',''); }
+
+  async function api(path, opts){
+    const res = await fetch(path, Object.assign({ headers:{'Content-Type':'application/json'} }, opts));
+    let data = null;
+    try{ data = await res.json(); }catch(e){}
+    if(!res.ok) throw new Error((data && data.error) || ('Request failed (' + res.status + ')'));
+    return data;
+  }
+
+  /* ---------------- view routing ---------------- */
+  const ALL_SCREENS = ['auth-screen','dashboard-screen','setup-screen','chat-screen','report-screen','admin-users-screen','admin-user-screen'];
+  function showScreen(id, mainMode){
+    ALL_SCREENS.forEach(s => { $('#'+s).hidden = (s !== id); });
+    $('#main-el').className = mainMode || 'centered';
+  }
+
+  function updateTopbar(){
+    if(state.user){
+      $('#welcome-text').hidden = false;
+      $('#welcome-text').innerHTML = 'Welcome, <b>' + escapeHtml(state.user.name.split(' ')[0]) + '</b>';
+      $('#logout-btn').hidden = false;
+    } else {
+      $('#welcome-text').hidden = true;
+      $('#logout-btn').hidden = true;
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  $('#brand-home').addEventListener('click', () => {
+    if(!state.user) return;
+    if(state.user.role === 'admin') loadAdminUsers(); else loadDashboard();
+  });
+
+  /* ---------------- theme ---------------- */
+  const SUN = '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>';
+  const MOON = '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"></path>';
+  $('#theme-toggle').addEventListener('click', () => {
+    const root = document.documentElement;
+    const isLight = root.getAttribute('data-theme') === 'light';
+    root.setAttribute('data-theme', isLight ? 'dark' : 'light');
+    $('#theme-icon').innerHTML = isLight ? SUN : MOON;
+  });
+
+  /* ---------------- auth screen ---------------- */
+  $('#tab-login').addEventListener('click', () => switchAuthTab('login'));
+  $('#tab-signup').addEventListener('click', () => switchAuthTab('signup'));
+  $('#go-signup').addEventListener('click', () => switchAuthTab('signup'));
+  $('#go-login').addEventListener('click', () => switchAuthTab('login'));
+  function switchAuthTab(which){
+    $('#tab-login').classList.toggle('active', which === 'login');
+    $('#tab-signup').classList.toggle('active', which === 'signup');
+    $('#login-pane').hidden = which !== 'login';
+    $('#signup-pane').hidden = which !== 'signup';
+    clearBanner('#login-error'); clearBanner('#signup-error');
+  }
+
+  $('#login-btn').addEventListener('click', async () => {
+    clearBanner('#login-error');
+    const email = $('#login-email').value.trim();
+    const password = $('#login-password').value;
+    if(!email || !password){ showBanner('#login-error','Enter your email and password.'); return; }
+    $('#login-btn').disabled = true;
+    try{
+      const user = await api('/api/auth/login', { method:'POST', body: JSON.stringify({ email, password }) });
+      afterAuth(user);
+    }catch(err){ showBanner('#login-error', err.message); }
+    $('#login-btn').disabled = false;
+  });
+
+  $('#signup-btn').addEventListener('click', async () => {
+    clearBanner('#signup-error');
+    const name = $('#signup-name').value.trim();
+    const email = $('#signup-email').value.trim();
+    const sapId = $('#signup-sap').value.trim();
+    const password = $('#signup-password').value;
+    const confirmPassword = $('#signup-confirm').value;
+    if(!name || !email || !sapId || !password || !confirmPassword){ showBanner('#signup-error','All fields are required.'); return; }
+    if(password !== confirmPassword){ showBanner('#signup-error','Passwords do not match.'); return; }
+    if(password.length < 8){ showBanner('#signup-error','Password must be at least 8 characters.'); return; }
+    $('#signup-btn').disabled = true;
+    try{
+      const user = await api('/api/auth/signup', { method:'POST', body: JSON.stringify({ name, email, sapId, password, confirmPassword }) });
+      afterAuth(user);
+    }catch(err){ showBanner('#signup-error', err.message); }
+    $('#signup-btn').disabled = false;
+  });
+
+  $('#logout-btn').addEventListener('click', async () => {
+    try{ await api('/api/auth/logout', { method:'POST' }); }catch(e){}
+    state.user = null;
+    updateTopbar();
+    showScreen('auth-screen','centered');
+  });
+
+  function afterAuth(user){
+    state.user = user;
+    updateTopbar();
+    if(user.role === 'admin') loadAdminUsers(); else loadDashboard();
+  }
+
+  async function checkSession(){
+    try{
+      const user = await api('/api/me');
+      afterAuth(user);
+    }catch(e){
+      showScreen('auth-screen','centered');
+    }
+  }
+
+  /* ---------------- dashboard ---------------- */
+  async function loadDashboard(){
+    showScreen('dashboard-screen','top');
+    $('#dash-welcome').textContent = 'Welcome, ' + state.user.name.split(' ')[0];
+    let reports = [];
+    try{ reports = await api('/api/reports'); }catch(e){}
+    renderDashboardStats(reports);
+    renderScoreChart(reports);
+    renderHistoryTable(reports, '#history-table-wrap', { downloadable:true, context:'dashboard' });
+  }
+
+  function renderDashboardStats(reports){
+    $('#stat-count').textContent = reports.length;
+    if(reports.length === 0){
+      $('#stat-avg').textContent = '—'; $('#stat-best').textContent = '—'; $('#stat-best-sub').textContent = '';
+      $('#stat-last').textContent = '—'; $('#stat-last-sub').textContent = '';
+      return;
+    }
+    const avg = Math.round(reports.reduce((s,r)=>s+Number(r.overall_score),0) / reports.length);
+    $('#stat-avg').textContent = avg;
+    const cats = ['empathy','technical_accuracy','resolution','communication'];
+    const catLabels = {empathy:'Empathy', technical_accuracy:'Technical accuracy', resolution:'Resolution', communication:'Communication'};
+    const catAverages = cats.map(c => ({ c, v: reports.reduce((s,r)=>s+Number(r[c]),0) / reports.length }));
+    catAverages.sort((a,b)=>b.v-a.v);
+    $('#stat-best').textContent = catLabels[catAverages[0].c];
+    $('#stat-best-sub').textContent = 'avg ' + Math.round(catAverages[0].v);
+    const last = reports[0];
+    $('#stat-last').textContent = outcomeLabel(last.final_status);
+    $('#stat-last-sub').textContent = new Date(last.created_at).toLocaleDateString();
+  }
+
+  function outcomeLabel(status){
+    return status === 'resolved' ? 'Resolved' : status === 'escalated' ? 'Escalated' : 'Ended by agent';
+  }
+
+  function renderScoreChart(reports){
+    const chart = $('#score-chart');
+    chart.innerHTML = '';
+    const recent = reports.slice(0, 8).reverse();
+    if(recent.length === 0){ chart.innerHTML = '<div class="empty-note">No sessions yet — run a ticket to see your trend here.</div>'; return; }
+    recent.forEach(r => {
+      const wrap = el('div','bar-wrap');
+      const score = Math.round(Number(r.overall_score));
+      wrap.innerHTML = '<div class="bar-num">'+score+'</div><div class="bar" style="height:0%"></div><div class="bar-lbl">'+new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'})+'</div>';
+      chart.appendChild(wrap);
+      requestAnimationFrame(()=>{ wrap.querySelector('.bar').style.height = Math.max(6,score) + '%'; });
+    });
+  }
+
+  function renderHistoryTable(reports, targetSel, opts){
+    const wrap = $(targetSel);
+    if(reports.length === 0){ wrap.innerHTML = '<div class="empty-note">No sessions recorded yet.</div>'; return; }
+    const table = el('table','data-table');
+    table.innerHTML = '<thead><tr><th>Ticket</th><th>Scenario</th><th>Mood</th><th>Score</th><th>Outcome</th><th>Date</th><th></th></tr></thead>';
+    const tbody = el('tbody');
+    reports.forEach(r => {
+      const tr = el('tr');
+      tr.innerHTML =
+        '<td class="mono">'+escapeHtml(r.ticket_id)+'</td>' +
+        '<td>'+escapeHtml(r.scenario)+'</td>' +
+        '<td>'+escapeHtml(r.mood)+'</td>' +
+        '<td>'+Math.round(Number(r.overall_score))+'</td>' +
+        '<td><span class="pill '+r.final_status+'">'+outcomeLabel(r.final_status)+'</span></td>' +
+        '<td>'+new Date(r.created_at).toLocaleDateString()+'</td>' +
+        '<td></td>';
+      const actionsTd = tr.lastElementChild;
+      const viewBtn = el('button','row-btn'); viewBtn.textContent = 'View';
+      viewBtn.addEventListener('click', () => openReportFromRecord(r, opts.context));
+      actionsTd.appendChild(viewBtn);
+      if(opts.downloadable){
+        const dlBtn = el('button','row-btn'); dlBtn.textContent = 'Download';
+        dlBtn.addEventListener('click', () => { window.location = '/api/reports/' + r.id + '/download'; });
+        actionsTd.appendChild(dlBtn);
+      }
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.innerHTML = '';
+    wrap.appendChild(table);
+  }
+
+  function openReportFromRecord(r, context){
+    state.reportBackTarget = context;
+    renderReport({
+      overall_score:r.overall_score, empathy:r.empathy, technical_accuracy:r.technical_accuracy,
+      resolution:r.resolution, communication:r.communication, verdict:r.verdict,
+      strengths:r.strengths, improvements:r.improvements, reportId:r.id
+    }, { ticketId:r.ticket_id, scenario:r.scenario, mood:r.mood, date:r.created_at, transcript:r.transcript });
+    showScreen('report-screen','top');
+  }
+
+  $('#new-ticket-btn').addEventListener('click', () => showSetupScreen());
+
+  /* ---------------- setup screen ---------------- */
+  function buildSelect(selectEl, items, key){
+    items.forEach(item => {
+      const opt = el('option');
+      opt.value = item.id;
+      opt.textContent = item.label + (item.desc ? ' — ' + item.desc : '');
+      selectEl.appendChild(opt);
+    });
+    selectEl.addEventListener('change', () => {
+      state[key] = items.find(i => i.id === selectEl.value) || null;
+    });
+  }
+  buildSelect($('#mood-select'), MOODS, 'mood');
+  buildSelect($('#scenario-select'), SCENARIOS, 'scenario');
+
+  function showSetupScreen(){
+    state.mood = null; state.scenario = null;
+    $('#mood-select').selectedIndex = 0;
+    $('#scenario-select').selectedIndex = 0;
+    clearBanner('#setup-error');
+    showScreen('setup-screen','centered');
+  }
+
+  $('#start-btn').addEventListener('click', startTest);
+
+  function startTest(){
+    clearBanner('#setup-error');
+    if(!state.mood){ showBanner('#setup-error','Pick the client\'s mood.'); return; }
+    if(!state.scenario){ showBanner('#setup-error','Pick what the issue is.'); return; }
+
+    state.history = [];
+    state.satisfaction = state.mood.start;
+    state.ended = false;
+    state.startTime = Date.now();
+    state.ticketId = 'SD-' + Math.floor(10000 + Math.random()*89999);
+
+    showScreen('chat-screen','top');
+    $('#ticket-id').textContent = state.ticketId;
+    $('#ticket-scenario-title').textContent = state.scenario.label;
+    $('#ticket-mood-title').textContent = state.mood.label + ' client';
+    document.documentElement.style.setProperty('--mood-color', state.mood.color);
+    $('#thread').innerHTML = '';
+    $('#agent-input').disabled = false; $('#send-btn').disabled = false;
+
+    updateGauge(state.satisfaction);
+    startTimer();
+    kickoffClient();
+  }
+
+  function startTimer(){
+    clearInterval(state.timerHandle);
+    state.timerHandle = setInterval(()=>{
+      const s = Math.floor((Date.now()-state.startTime)/1000);
+      const mm = String(Math.floor(s/60)).padStart(2,'0');
+      const ss = String(s%60).padStart(2,'0');
+      $('#timer').textContent = mm+':'+ss;
+    }, 1000);
+  }
+
+  function updateGauge(value){
+    value = Math.max(0, Math.min(100, value));
+    const angle = -90 + (value/100)*180;
+    $('#gauge-needle').setAttribute('transform', 'rotate(' + angle + ' 100 100)');
+    const offset = 283 - (value/100)*283;
+    $('#gauge-arc-fg').setAttribute('stroke-dashoffset', offset);
+    let color, label;
+    if(value < 30){ color='var(--red)'; label='Critical'; }
+    else if(value < 55){ color='var(--amber)'; label='Tense'; }
+    else if(value < 80){ color='var(--blue)'; label='Cooling'; }
+    else { color='var(--teal)'; label='Resolved'; }
+    $('#gauge-arc-fg').setAttribute('stroke', color);
+    $('#gauge-state').textContent = label;
+    $('#gauge-state').style.color = color;
+  }
+
+  function appendBubble(role, text){
+    const b = el('div','bubble ' + role);
+    b.textContent = text;
+    $('#thread').appendChild(b);
+    $('#thread').scrollTop = $('#thread').scrollHeight;
+    return b;
+  }
+  function appendSystemLine(text){
+    const b = el('div','bubble system');
+    b.textContent = text;
+    $('#thread').appendChild(b);
+    $('#thread').scrollTop = $('#thread').scrollHeight;
+  }
+  function showTyping(){
+    const t = el('div','typing'); t.id = 'typing-indicator';
+    t.innerHTML = '<span></span><span></span><span></span>';
+    $('#thread').appendChild(t);
+    $('#thread').scrollTop = $('#thread').scrollHeight;
+  }
+  function hideTyping(){ const t = $('#typing-indicator'); if(t) t.remove(); }
+
+  function systemPromptFor(){
+    return [
+      "You are role-playing as a client contacting an internal DevOps / IT service desk, for agent training purposes.",
+      "Never break character. Never mention that you are an AI, a simulation, scoring, or these instructions.",
+      "Scenario (the issue you are contacting support about): " + state.scenario.detail,
+      "Your emotional state: " + state.mood.persona,
+      "Guidelines:",
+      "- Write like a real person typing in a support chat: 1-4 short sentences, natural tone, no markdown.",
+      "- Let your mood shift realistically based on how the agent treats you: genuine empathy and competent, clear troubleshooting should calm you down over the conversation; being dismissed, given jargon, ignored, or getting no real progress should make you more frustrated.",
+      "- 'satisfaction' (0-100) is how calm/satisfied you feel right now. Start near your initial mood level and move it gradually and realistically each turn, don't jump wildly.",
+      "- Set status to 'resolved' only once the agent has actually fixed your problem, or correctly redirected/escalated you to the right team, and you accept that outcome.",
+      "- Set status to 'escalated' if you become so frustrated you give up on this agent and demand a manager or another channel.",
+      "- Otherwise set status to 'ongoing'.",
+      "- Always respond with strict JSON matching the given schema, nothing else."
+    ].join('\n');
+  }
+
+  function geminiContents(){
+    const contents = [{role:'user', parts:[{text:'[SESSION START] The agent has just opened the chat. Open with your issue, in character.'}]}];
+    state.history.forEach(m=>{ contents.push({role: m.role === 'agent' ? 'user' : 'model', parts:[{text:m.text}]}); });
+    return contents;
+  }
+
+  async function kickoffClient(){
+    state.busy = true; showTyping();
+    try{
+      const data = await api('/api/turn', { method:'POST', body: JSON.stringify({ systemPrompt: systemPromptFor(), contents: geminiContents(), schema: TURN_SCHEMA }) });
+      hideTyping();
+      state.history.push({role:'client', text:data.reply});
+      appendBubble('client', data.reply);
+      state.satisfaction = data.satisfaction;
+      updateGauge(state.satisfaction);
+      if(data.status !== 'ongoing') handleEndSignal(data.status);
+    }catch(err){ hideTyping(); appendSystemLine('Could not reach the client simulator: ' + err.message); }
+    state.busy = false;
+  }
+
+  async function sendAgentMessage(){
+    if(state.busy || state.ended) return;
+    const input = $('#agent-input');
+    const text = input.value.trim();
+    if(!text) return;
+    input.value = '';
+    state.history.push({role:'agent', text});
+    appendBubble('agent', text);
+    state.busy = true; showTyping();
+    try{
+      const data = await api('/api/turn', { method:'POST', body: JSON.stringify({ systemPrompt: systemPromptFor(), contents: geminiContents(), schema: TURN_SCHEMA }) });
+      hideTyping();
+      state.history.push({role:'client', text:data.reply});
+      appendBubble('client', data.reply);
+      state.satisfaction = data.satisfaction;
+      updateGauge(state.satisfaction);
+      if(data.status !== 'ongoing') handleEndSignal(data.status);
+    }catch(err){ hideTyping(); appendSystemLine('Could not reach the client simulator: ' + err.message); }
+    state.busy = false;
+  }
+
+  function handleEndSignal(status){
+    state.ended = true;
+    appendSystemLine(status === 'resolved' ? 'Client considers this resolved.' : 'Client has escalated away from this chat.');
+    setTimeout(()=>finishTest(status), 900);
+  }
+
+  $('#send-btn').addEventListener('click', sendAgentMessage);
+  $('#agent-input').addEventListener('keydown', e=>{ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendAgentMessage(); } });
+  $('#end-btn').addEventListener('click', ()=>{
+    if(state.ended) return;
+    if(state.history.filter(m=>m.role==='agent').length === 0){ appendSystemLine('Send at least one reply before ending the test.'); return; }
+    if(confirm('End the test now? This will generate your report based on the conversation so far.')){
+      state.ended = true;
+      finishTest('ended_by_agent');
+    }
+  });
+
+  async function finishTest(finalStatus){
+    clearInterval(state.timerHandle);
+    $('#agent-input').disabled = true; $('#send-btn').disabled = true;
+
+    const transcript = state.history.map(m => (m.role === 'agent' ? 'Agent: ' : 'Client: ') + m.text).join('\n');
+    const scoringPrompt = [
+      "You are an expert QA evaluator for IT/DevOps service desk conversations.",
+      "You are given a transcript between a trainee support agent ('Agent') and a simulated client.",
+      "Scenario: " + state.scenario.detail,
+      "Client's assigned mood going in: " + state.mood.label,
+      "How the conversation ended: " + finalStatus,
+      "Transcript:\n" + transcript,
+      "Score the AGENT's performance only, strictly based on this transcript, each 0-100:",
+      "- empathy: did they acknowledge and adapt to the client's emotional state?",
+      "- technical_accuracy: correctness and relevance of the troubleshooting, fix, or redirection.",
+      "- resolution: did they resolve, correctly redirect, or escalate appropriately, and how efficiently?",
+      "- communication: clarity, tone, professionalism, avoiding unnecessary jargon.",
+      "- overall_score: a holistic weighted score.",
+      "Give 2-4 specific strengths and 2-4 specific improvements, each one short sentence referencing something concrete from the transcript.",
+      "Give a one-sentence verdict summarizing the performance.",
+      "Respond with strict JSON matching the schema, nothing else."
+    ].join('\n');
+
+    try{
+      const report = await api('/api/score', { method:'POST', body: JSON.stringify({
+        systemPrompt: scoringPrompt,
+        contents: [{role:'user', parts:[{text:'Score this session now.'}]}],
+        schema: SCORE_SCHEMA,
+        meta: { ticketId: state.ticketId, scenario: state.scenario.label, mood: state.mood.label, finalStatus, transcript: state.history }
+      }) });
+      state.reportBackTarget = 'dashboard';
+      renderReport(report, { ticketId: state.ticketId, scenario: state.scenario.label, mood: state.mood.label, date: new Date().toISOString(), transcript: state.history });
+    }catch(err){
+      state.reportBackTarget = 'dashboard';
+      renderReport({
+        overall_score:0, empathy:0, technical_accuracy:0, resolution:0, communication:0,
+        verdict:'Could not generate a report: ' + err.message, strengths:[], improvements:['Try again from the dashboard.']
+      }, { ticketId: state.ticketId, scenario: state.scenario.label, mood: state.mood.label, date: new Date().toISOString(), transcript: state.history });
+    }
+    showScreen('report-screen','top');
+  }
+
+  /* ---------------- report screen ---------------- */
+  function renderReport(r, ctx){
+    state.lastReport = { r, ctx };
+    const score = Math.round(Math.max(0,Math.min(100,r.overall_score||0)));
+    $('#score-num').textContent = score;
+    const circumference = 276.5;
+    $('#score-circle').setAttribute('stroke-dashoffset', circumference - (score/100)*circumference);
+    $('#score-circle').setAttribute('stroke', score>=75?'var(--teal)': score>=45?'var(--amber)':'var(--red)');
+    $('#report-verdict').textContent = r.verdict || '—';
+    $('#report-meta').textContent = ctx.ticketId + ' · ' + ctx.scenario + ' · ' + ctx.mood + ' · ' + new Date(ctx.date).toLocaleString();
+
+    const cats = [['Empathy', r.empathy], ['Technical accuracy', r.technical_accuracy], ['Resolution', r.resolution], ['Communication', r.communication]];
+    const rowsEl = $('#cat-rows'); rowsEl.innerHTML = '';
+    cats.forEach(([label,val])=>{
+      val = Math.round(Math.max(0,Math.min(100,val||0)));
+      const row = el('div','cat-row');
+      row.innerHTML = '<div class="cat-row-top"><span>'+label+'</span><span class="val">'+val+'</span></div><div class="bar-track"><div class="bar-fill"></div></div>';
+      rowsEl.appendChild(row);
+      requestAnimationFrame(()=>{ row.querySelector('.bar-fill').style.width = val + '%'; });
+    });
+
+    const sList = $('#strengths-list'); sList.innerHTML='';
+    (r.strengths||[]).forEach(s=>{ const li=el('li'); li.textContent=s; sList.appendChild(li); });
+    const iList = $('#improvements-list'); iList.innerHTML='';
+    (r.improvements||[]).forEach(s=>{ const li=el('li'); li.textContent=s; iList.appendChild(li); });
+
+    const tBox = $('#transcript-box');
+    tBox.innerHTML = '';
+    (ctx.transcript||[]).forEach(m=>{
+      const p2 = el('p');
+      p2.innerHTML = '<b>' + (m.role === 'agent' ? 'Agent' : 'Client') + ':</b> ' + escapeHtml(m.text);
+      tBox.appendChild(p2);
+    });
+    tBox.hidden = true;
+    $('#transcript-toggle').textContent = 'View transcript ▾';
+
+    $('#report-download-btn').style.display = r.reportId ? 'block' : 'none';
+    $('#report-download-btn').onclick = () => { window.location = '/api/reports/' + r.reportId + '/download'; };
+  }
+
+  $('#transcript-toggle').addEventListener('click', () => {
+    const box = $('#transcript-box');
+    box.hidden = !box.hidden;
+    $('#transcript-toggle').textContent = box.hidden ? 'View transcript ▾' : 'Hide transcript ▴';
+  });
+
+  $('#report-back-btn').addEventListener('click', () => {
+    if(state.reportBackTarget === 'admin-user' && state.adminCurrentUserId){
+      loadAdminUserDetail(state.adminCurrentUserId);
+    } else if(state.reportBackTarget === 'admin-users'){
+      loadAdminUsers();
+    } else {
+      loadDashboard();
+    }
+  });
+
+  /* ---------------- admin ---------------- */
+  async function loadAdminUsers(){
+    showScreen('admin-users-screen','top');
+    let users = [];
+    try{ users = await api('/api/admin/users'); }catch(e){}
+    const wrap = $('#admin-users-table-wrap');
+    if(users.length === 0){ wrap.innerHTML = '<div class="empty-note">No trainees have signed up yet.</div>'; return; }
+    const table = el('table','data-table');
+    table.innerHTML = '<thead><tr><th>Name</th><th>Email</th><th>SAP ID</th><th>Sessions</th><th>Avg score</th><th>Joined</th><th></th></tr></thead>';
+    const tbody = el('tbody');
+    users.forEach(u => {
+      const tr = el('tr');
+      tr.innerHTML =
+        '<td>'+escapeHtml(u.name)+'</td>' +
+        '<td>'+escapeHtml(u.email)+'</td>' +
+        '<td class="mono">'+escapeHtml(u.sap_id)+'</td>' +
+        '<td>'+u.report_count+'</td>' +
+        '<td>'+(u.report_count > 0 ? Math.round(u.avg_score) : '—')+'</td>' +
+        '<td>'+new Date(u.created_at).toLocaleDateString()+'</td>' +
+        '<td></td>';
+      const btn = el('button','row-btn'); btn.textContent = 'View';
+      btn.addEventListener('click', () => loadAdminUserDetail(u.id));
+      tr.lastElementChild.appendChild(btn);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.innerHTML = ''; wrap.appendChild(table);
+  }
+
+  $('#admin-back-link').addEventListener('click', loadAdminUsers);
+
+  async function loadAdminUserDetail(userId){
+    state.adminCurrentUserId = userId;
+    showScreen('admin-user-screen','top');
+    clearBanner('#reset-pw-success'); clearBanner('#reset-pw-error');
+    $('#reset-pw-input').value = '';
+    let data;
+    try{ data = await api('/api/admin/users/' + userId + '/reports'); }
+    catch(e){ $('#admin-user-name').textContent = 'Could not load user'; return; }
+    $('#admin-user-name').textContent = data.user.name;
+    $('#admin-user-meta').textContent = data.user.email + ' · SAP ID ' + data.user.sap_id + ' · Joined ' + new Date(data.user.created_at).toLocaleDateString();
+    renderHistoryTable(data.reports, '#admin-user-history-wrap', { downloadable:true, context:'admin-user' });
+  }
+
+  $('#reset-pw-btn').addEventListener('click', async () => {
+    clearBanner('#reset-pw-success'); clearBanner('#reset-pw-error');
+    const pw = $('#reset-pw-input').value;
+    if(!pw || pw.length < 8){ showBanner('#reset-pw-error','Enter a password with at least 8 characters.'); return; }
+    try{
+      await api('/api/admin/users/' + state.adminCurrentUserId + '/reset-password', { method:'POST', body: JSON.stringify({ newPassword: pw }) });
+      showBanner('#reset-pw-success','Password updated.', 'success');
+      $('#reset-pw-input').value = '';
+    }catch(err){ showBanner('#reset-pw-error', err.message); }
+  });
+
+  /* ---------------- boot ---------------- */
+  checkSession();
+
+})();
+</script>
+</body>
+</html>
