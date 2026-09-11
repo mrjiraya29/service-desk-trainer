@@ -768,15 +768,33 @@
       border-radius: 4px;
     }
 
-    .bubble {
+    .bubble-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
       max-width: 72%;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: pop .35s var(--ease) forwards;
+    }
+
+    .bubble-wrap.client { align-self: flex-start; }
+    .bubble-wrap.agent { align-self: flex-end; }
+
+    .bubble-sender {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--muted);
+      margin: 0 4px;
+    }
+
+    .bubble-wrap.agent .bubble-sender { align-self: flex-end; }
+
+    .bubble {
       padding: 11px 15px;
       border-radius: 14px;
       font-size: 14.5px;
       line-height: 1.5;
-      opacity: 0;
-      transform: translateY(8px);
-      animation: pop .35s var(--ease) forwards;
     }
 
     @keyframes pop {
@@ -787,7 +805,6 @@
     }
 
     .bubble.client {
-      align-self: flex-start;
       background: var(--panel-raised);
       border: 1px solid var(--line);
       border-left: 3px solid var(--mood-color, var(--amber));
@@ -795,7 +812,6 @@
     }
 
     .bubble.agent {
-      align-self: flex-end;
       background: var(--blue);
       color: #fff;
       border-top-right-radius: 4px;
@@ -808,6 +824,10 @@
       background: none;
       border: none;
       text-align: center;
+      max-width: 100%;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: pop .35s var(--ease) forwards;
     }
 
     .typing {
@@ -1723,11 +1743,18 @@
       }
 
       function appendBubble(role, text) {
+        const wrap = el('div', 'bubble-wrap ' + role);
+        const sender = el('div', 'bubble-sender');
+        sender.textContent = role === 'agent' ? (state.user ? state.user.name : 'Agent') : 'Client';
+        
         const b = el('div', 'bubble ' + role);
         b.textContent = text;
-        $('#thread').appendChild(b);
+        
+        wrap.appendChild(sender);
+        wrap.appendChild(b);
+        $('#thread').appendChild(wrap);
         $('#thread').scrollTop = $('#thread').scrollHeight;
-        return b;
+        return wrap;
       }
       function appendSystemLine(text) {
         const b = el('div', 'bubble system');
