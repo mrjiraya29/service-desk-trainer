@@ -1314,7 +1314,8 @@
           <div class="transcript-box" id="transcript-box" hidden></div>
           <div class="report-actions">
             <button class="ghost-btn" id="report-back-btn">Back</button>
-            <button class="primary-btn" id="report-download-btn">Download report</button>
+            <button class="ghost-btn" id="report-download-txt-btn" style="width:auto; padding:13px 18px;">⬇ Download TXT</button>
+            <button class="primary-btn" id="report-download-excel-btn" style="width:auto; padding:14px 18px;">⬇ Download Excel</button>
           </div>
         </div>
       </section>
@@ -1620,9 +1621,12 @@
           viewBtn.addEventListener('click', () => openReportFromRecord(r, opts.context));
           actionsTd.appendChild(viewBtn);
           if (opts.downloadable) {
-            const dlBtn = el('button', 'row-btn'); dlBtn.textContent = 'Download';
-            dlBtn.addEventListener('click', () => { window.location = '/api/reports/' + r.id + '/download'; });
-            actionsTd.appendChild(dlBtn);
+            const dlTxt = el('button', 'row-btn'); dlTxt.textContent = 'TXT';
+            dlTxt.addEventListener('click', () => { window.location = '/api/reports/' + r.id + '/download'; });
+            actionsTd.appendChild(dlTxt);
+            const dlXls = el('button', 'row-btn'); dlXls.textContent = 'Excel';
+            dlXls.addEventListener('click', () => { window.location = '/api/reports/' + r.id + '/download-excel'; });
+            actionsTd.appendChild(dlXls);
           }
           tbody.appendChild(tr);
         });
@@ -1894,8 +1898,11 @@
         tBox.hidden = true;
         $('#transcript-toggle').textContent = 'View transcript ▾';
 
-        $('#report-download-btn').style.display = r.reportId ? 'block' : 'none';
-        $('#report-download-btn').onclick = () => { window.location = '/api/reports/' + r.reportId + '/download'; };
+        const hasSavedReport = !!r.reportId;
+        $('#report-download-txt-btn').style.display = hasSavedReport ? 'inline-block' : 'none';
+        $('#report-download-excel-btn').style.display = hasSavedReport ? 'inline-block' : 'none';
+        $('#report-download-txt-btn').onclick = () => { window.location = '/api/reports/' + r.reportId + '/download'; };
+        $('#report-download-excel-btn').onclick = () => { window.location = '/api/reports/' + r.reportId + '/download-excel'; };
       }
 
       $('#transcript-toggle').addEventListener('click', () => {
