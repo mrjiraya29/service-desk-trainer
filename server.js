@@ -130,9 +130,15 @@ app.post('/api/score', async (req, res) => {
 
 app.post('/api/auth/signup', async (req, res) => {
   try {
-    const { name, email, sapId, password, confirmPassword } = req.body || {};
+    const { name, email, sapId, password, confirmPassword, project, lob } = req.body || {};
     if (!name || !email || !sapId || !password || !confirmPassword) {
       return res.status(400).json({ error: 'All fields are required.' });
+    }
+    if (!project) {
+      return res.status(400).json({ error: 'Project is required.' });
+    }
+    if (!lob) {
+      return res.status(400).json({ error: 'Line of Business is required.' });
     }
     if (password !== confirmPassword) {
       return res.status(400).json({ error: 'Passwords do not match.' });
@@ -151,10 +157,10 @@ app.post('/api/auth/signup', async (req, res) => {
     }
 
     const passwordHash = await auth.hashPassword(password);
-    const user = await db.createUser({ name, email, sapId, passwordHash });
+    const user = await db.createUser({ name, email, sapId, passwordHash, project, lob });
     const token = auth.issueToken(user);
     auth.setAuthCookie(res, token);
-    res.json({ id: user.id, name: user.name, email: user.email, sap_id: user.sap_id, role: user.role });
+    res.json({ id: user.id, name: user.name, email: user.email, sap_id: user.sap_id, project: user.project, lob: user.lob, role: user.role });
   } catch (err) {
     console.error('[signup]', err);
     res.status(500).json({ error: err.message });
@@ -192,9 +198,15 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/me', (req, res) => {
+app.get('/api/me', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not signed in.' });
-  res.json({ id: req.user.sub, name: req.user.name, role: req.user.role });
+  try {
+    const user = await db.findUserById(req.user.sub);
+    if (!user) return res.status(401).json({ error: 'User not found.' });
+    res.json({ id: user.id, name: user.name, email: user.email, sap_id: user.sap_id, project: user.project, lob: user.lob, role: user.role });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // =====================================================================

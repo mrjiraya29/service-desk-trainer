@@ -30,10 +30,16 @@ async function initSchema() {
       email         TEXT NOT NULL UNIQUE,
       sap_id        TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
+      project       TEXT NOT NULL DEFAULT '',
+      lob           TEXT NOT NULL DEFAULT '',
       role          TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
       created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+
+  // Migrate existing tables that don't have the new columns yet
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS project TEXT NOT NULL DEFAULT ''`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS lob TEXT NOT NULL DEFAULT ''`);
 
   await query(`
     CREATE TABLE IF NOT EXISTS reports (
@@ -66,9 +72,9 @@ async function initSchema() {
       const bcrypt = require('bcryptjs');
       const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
       await query(
-        `INSERT INTO users (name, email, sap_id, password_hash, role)
-         VALUES ($1, $2, $3, $4, 'admin')`,
-        [process.env.ADMIN_NAME || 'Administrator', process.env.ADMIN_EMAIL.toLowerCase(), process.env.ADMIN_SAP_ID || 'ADMIN-0001', hash]
+        `INSERT INTO users (name, email, sap_id, password_hash, project, lob, role)
+         VALUES ($1, $2, $3, $4, $5, $6, 'admin')`,
+        [process.env.ADMIN_NAME || 'Administrator', process.env.ADMIN_EMAIL.toLowerCase(), process.env.ADMIN_SAP_ID || 'ADMIN-0001', hash, '', '']
       );
       console.log('[db] Seeded initial admin account for', process.env.ADMIN_EMAIL);
     }
@@ -77,12 +83,12 @@ async function initSchema() {
 
 /* ---------------- users ---------------- */
 
-async function createUser({ name, email, sapId, passwordHash }) {
+async function createUser({ name, email, sapId, passwordHash, project, lob }) {
   const result = await query(
-    `INSERT INTO users (name, email, sap_id, password_hash)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, name, email, sap_id, role, created_at`,
-    [name, email.toLowerCase(), sapId, passwordHash]
+    `INSERT INTO users (name, email, sap_id, password_hash, project, lob)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, name, email, sap_id, project, lob, role, created_at`,
+    [name, email.toLowerCase(), sapId, passwordHash, project || '', lob || '']
   );
   return result.rows[0];
 }
@@ -98,7 +104,7 @@ async function findUserBySapId(sapId) {
 }
 
 async function findUserById(id) {
-  const result = await query('SELECT id, name, email, sap_id, role, created_at FROM users WHERE id = $1', [id]);
+  const result = await query('SELECT id, name, email, sap_id, project, lob, role, created_at FROM users WHERE id = $1', [id]);
   return result.rows[0] || null;
 }
 
@@ -109,7 +115,7 @@ async function setUserPassword(userId, passwordHash) {
 async function listUsersWithStats() {
   const result = await query(`
     SELECT
-      u.id, u.name, u.email, u.sap_id, u.role, u.created_at,
+      u.id, u.name, u.email, u.sap_id, u.project, u.lob, u.role, u.created_at,
       COUNT(r.id)::int                         AS report_count,
       COALESCE(ROUND(AVG(r.overall_score)), 0) AS avg_score,
       MAX(r.created_at)                        AS last_session_at
